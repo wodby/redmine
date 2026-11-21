@@ -58,6 +58,9 @@ env=(
     -e DB_PASSWORD="${db_password}"
     -e SECRET_KEY_BASE=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     -e WEB_CONCURRENCY=2
+    # No mail server answers there: sending email during a request must not
+    # break the request.
+    -e SMTP_HOST="${NAME}-no-smtp"
 )
 setup_env=(
     -e REDMINE_ADMIN_LOGIN=owner
@@ -87,6 +90,8 @@ done
 expect "Health check before installation" "$(status /-/health)" 200
 
 expect "Redmine version" "$(docker exec "${web}" bin/rails runner 'puts Redmine::VERSION.to_s' 2>/dev/null)" "${REDMINE_VER}"
+# Emails are sent during the request, not from a queue in memory that a restart loses.
+expect "Mailer queue" "$(docker exec "${web}" bin/rails runner 'puts ActionMailer::MailDeliveryJob.queue_adapter.class.name' 2>/dev/null)" "InlineAdapter"
 
 # The install action, in a separate container like the post-deploy job.
 run_update() {
@@ -133,7 +138,9 @@ expect "Sign in as the administrator" "${location}" "https://redmine.example.com
 expect "Signed-in page" "$(request -b /tmp/cookies http://localhost:3000/my/page)" "owner"
 
 # An attachment through the REST API lands in the files volume.
-docker exec "${web}" bin/rails runner 'Setting.rest_api_enabled = "1"' > /dev/null 2>&1
+# The administrator is notified of its own changes too, so creating the issue
+# sends an email.
+docker exec "${web}" bin/rails runner 'Setting.rest_api_enabled = "1"; User.find_by(login: "owner").pref.update!(no_self_notified: false)' > /dev/null 2>&1
 upload="$(request -u "owner:${admin_password}" -H 'Content-Type: application/octet-stream' \
     --data-binary 'wodby test attachment' 'http://localhost:3000/uploads.json?filename=test.txt')"
 expect "Upload an attachment" "${upload}" '"token"'
@@ -145,6 +152,7 @@ issue="$(request -u "owner:${admin_password}" -H 'Content-Type: application/json
     -d "{\"issue\": {\"project_id\": \"wodby-test\", \"subject\": \"Test\", \"uploads\": [{\"token\": \"${upload_token}\", \"filename\": \"test.txt\"}]}}" \
     http://localhost:3000/issues.json)"
 expect "Create an issue with the attachment" "${issue}" '"subject":"Test"'
+expect "The notification email was tried during the request" "$(docker logs "${web}" 2>&1)" "Email delivery error"
 expect "Attachment in the files volume" "$(docker exec "${web}" sh -c 'cat $(find /mnt/files -type f -name "*test.txt")')" "wodby test attachment"
 
 echo "All checks passed"

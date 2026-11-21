@@ -76,6 +76,7 @@ so install `build-essential` and the libraries the gems need first. `redmine-upd
 | `WEB_CONCURRENCY`                 | `0`          | Puma worker processes. `0` runs one process                                 |
 | `RAILS_MAX_THREADS`               | `5`          | Puma threads per process                                                    |
 | `PUMA_PERSISTENT_TIMEOUT`         | `75`         | Seconds an idle keep-alive connection stays open                            |
+| `REDMINE_QUEUE_ADAPTER`           | `inline`     | Active Job adapter. `inline` sends email during the request; `async` queues it in memory and loses it on restart |
 | `REDMINE_ADMIN_LOGIN`             | `admin`      | `redmine-update` only: the first administrator                              |
 | `REDMINE_ADMIN_PASSWORD`          |              | `redmine-update` only: required while no administrator is set up            |
 | `REDMINE_ADMIN_EMAIL`             |              | `redmine-update` only                                                       |
@@ -84,8 +85,8 @@ so install `build-essential` and the libraries the gems need first. `redmine-upd
 | `WODBY_PRIMARY_URL`               |              | `redmine-update` only: used when `REDMINE_HOST_URL` is empty                |
 | `REDMINE_MAIL_FROM`               |              | `redmine-update` only: the email sender                                     |
 
-`config/database.yml` and `config/configuration.yml` read these variables when Redmine starts. Replace the files in
-your own image to configure anything else.
+`config/database.yml`, `config/configuration.yml` and `config/additional_environment.rb` read these variables when
+Redmine starts. Replace the files in your own image to configure anything else.
 
 ## Ports
 
