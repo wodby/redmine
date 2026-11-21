@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# Installs Redmine into an empty database or upgrades an installed one: runs
+# the core and plugin migrations, then, in the same process, loads the default
+# configuration (REDMINE_LANG, default en) once, sets up the first
+# administrator from REDMINE_ADMIN_LOGIN, REDMINE_ADMIN_PASSWORD and
+# REDMINE_ADMIN_EMAIL, and sets the host name (REDMINE_HOST_URL or
+# WODBY_PRIMARY_URL) and the email sender (REDMINE_MAIL_FROM) until they are
+# set in Redmine.
+
+set -eo pipefail
+
+if [[ -n "${DEBUG}" ]]; then
+    set -x
+fi
+
+cd "${APP_ROOT}"
+exec bin/rake db:migrate redmine:plugins:migrate wodby:setup

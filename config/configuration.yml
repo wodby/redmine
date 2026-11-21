@@ -1,0 +1,39 @@
+# Redmine's settings that live outside the database, read from environment
+# variables on every start. Everything else is set in Administration ›
+# Settings.
+<%
+  # A YAML single-quoted string, which has no escapes to get wrong.
+  q = ->(value) { "'" + value.to_s.gsub("'", "''") + "'" }
+  smtp_host = ENV['SMTP_HOST'].to_s
+  smtp_user = ENV['SMTP_USERNAME'].to_s
+%>
+default:
+<% unless smtp_host.empty? %>
+  email_delivery:
+    delivery_method: :smtp
+    smtp_settings:
+      address: <%= q[smtp_host] %>
+      port: <%= Integer(ENV['SMTP_PORT'].to_s.empty? ? 25 : ENV['SMTP_PORT']) %>
+<%   unless ENV['SMTP_DOMAIN'].to_s.empty? %>
+      domain: <%= q[ENV['SMTP_DOMAIN']] %>
+<%   end %>
+      enable_starttls_auto: <%= ENV.fetch('SMTP_STARTTLS', 'true') == 'true' %>
+<%   if ENV['SMTP_TLS'] == 'true' %>
+      tls: true
+<%   end %>
+<%   unless smtp_user.empty? %>
+      authentication: <%= ENV.fetch('SMTP_AUTHENTICATION', 'login').to_sym.inspect %>
+      user_name: <%= q[smtp_user] %>
+      password: <%= q[ENV.fetch('SMTP_PASSWORD', '')] %>
+<%   end %>
+<% end %>
+
+  # Uploaded files. Every replica must see the same directory.
+  attachments_storage_path: <%= q[ENV.fetch('REDMINE_FILES_DIR', '/mnt/files')] %>
+
+  # The "Stay logged in" cookie is sent only over HTTPS when this is on.
+  autologin_cookie_secure: <%= ENV['REDMINE_AUTOLOGIN_COOKIE_SECURE'] == 'true' %>
+
+<% unless ENV['REDMINE_AVATAR_SERVER_URL'].to_s.empty? %>
+  avatar_server_url: <%= q[ENV['REDMINE_AVATAR_SERVER_URL']] %>
+<% end %>
