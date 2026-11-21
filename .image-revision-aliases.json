@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "image": "wodby/redmine",
+  "versions": [
+    {
+      "version": {
+        "env": "REDMINE70"
+      },
+      "variants": [
+        {
+          "short": [
+            "{minor}"
+          ],
+          "full": "{version}"
+        }
+      ]
+    },
+    {
+      "version": {
+        "env": "REDMINE61"
+      },
+      "variants": [
+        {
+          "short": [
+            "{minor}"
+          ],
+          "full": "{version}"
+        }
+      ]
+    }
+  ]
+}

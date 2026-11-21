@@ -1,0 +1,37 @@
+# The database connection, read from environment variables on every start.
+# Redmine's Gemfile also reads the adapter line to choose the database gem.
+<%
+  # A YAML single-quoted string, which has no escapes to get wrong. The Gemfile
+  # renders this file too, before any library is loaded.
+  q = ->(value) { "'" + value.to_s.gsub("'", "''") + "'" }
+  db_adapter = ENV.fetch('DB_ADAPTER', 'postgresql')
+  db_mysql = db_adapter.start_with?('mysql') || db_adapter == 'trilogy'
+  db_ssl_ca = ENV['DB_SSL_CA'].to_s
+  db_ssl_ca = '' unless File.file?(db_ssl_ca)
+%>
+<%= ENV.fetch('RAILS_ENV', 'production') %>:
+  adapter: <%= ENV.fetch('DB_ADAPTER', 'postgresql') %>
+  host: <%= q[ENV.fetch('DB_HOST', db_mysql ? 'mariadb' : 'postgres')] %>
+  port: <%= Integer(ENV['DB_PORT'].to_s.empty? ? (db_mysql ? 3306 : 5432) : ENV['DB_PORT']) %>
+  database: <%= q[ENV.fetch('DB_NAME', 'redmine')] %>
+  username: <%= q[ENV.fetch('DB_USER', 'redmine')] %>
+  password: <%= q[ENV.fetch('DB_PASSWORD', '')] %>
+  # Puma threads, plus the threads that send email in the background.
+  pool: <%= Integer(ENV.fetch('DB_POOL', Integer(ENV.fetch('RAILS_MAX_THREADS', 5)) + 2)) %>
+<% if db_mysql %>
+  encoding: utf8mb4
+<%   unless db_ssl_ca.empty? %>
+  # A managed database server's CA certificate: connect over TLS and verify the server.
+  sslca: <%= q[db_ssl_ca] %>
+  ssl_mode: <%= q[ENV.fetch('DB_SSL_MODE', 'verify_identity')] %>
+<%   end %>
+<% else %>
+  encoding: utf8
+<%   if db_ssl_ca.empty? %>
+  sslmode: <%= q[ENV.fetch('DB_SSL_MODE', 'prefer')] %>
+<%   else %>
+  # A managed database server's CA certificate: connect over TLS and verify the server.
+  sslmode: <%= q[ENV.fetch('DB_SSL_MODE', 'verify-full')] %>
+  sslrootcert: <%= q[db_ssl_ca] %>
+<%   end %>
+<% end %>
